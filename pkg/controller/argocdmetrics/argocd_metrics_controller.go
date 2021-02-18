@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strings"
 )
 
 const (
@@ -103,12 +104,17 @@ func (r *ArgoCDMetricsReconciler) Reconcile(request reconcile.Request) (reconcil
 	}
 
 	const clusterMonitoringLabel = "openshift.io/cluster-monitoring"
-	_, exists := namespace.Labels[clusterMonitoringLabel]
+	const userDefinedMonitoringLabel = "openshift.io/user-monitoring"
+	monitoringLabel := clusterMonitoringLabel
+	if !strings.HasPrefix(namespace.Name, "openshift-") {
+		monitoringLabel = userDefinedMonitoringLabel
+	}
+	_, exists := namespace.Labels[monitoringLabel]
 	if !exists {
 		if namespace.Labels == nil {
 			namespace.Labels = make(map[string]string)
 		}
-		namespace.Labels[clusterMonitoringLabel] = "true"
+		namespace.Labels[monitoringLabel] = "true"
 		err = r.client.Update(context.TODO(), &namespace)
 		if err != nil {
 			reqLogger.Error(err, "Error updating namespace",
